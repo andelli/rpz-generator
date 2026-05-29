@@ -67,7 +67,7 @@ HaGeZi provides multiple DNS blocklists focused on:
 * Popups
 * Privacy protection
 
-The RPZ generator currently uses:
+The RPZ generator currently uses this repo for additional filtering:
 
 ```text
 https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/pro.txt
