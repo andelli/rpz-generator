@@ -1,0 +1,19 @@
+; ==============================================================================
+; GOOGLE SAFESEARCH
+; ==============================================================================
+google.com                  IN CNAME forcesafesearch.google.com.
+www.google.com              IN CNAME forcesafesearch.google.com.
+google.co.id                IN CNAME forcesafesearch.google.com.
+www.google.co.id            IN CNAME forcesafesearch.google.com.
+; ==============================================================================
+; YOUTUBE RESTRICTED MODE
+; ==============================================================================
+www.youtube.com             IN CNAME restrict.youtube.com.
+m.youtube.com               IN CNAME restrict.youtube.com.
+youtubei.googleapis.com     IN CNAME restrict.youtube.com.
+youtube.com                 IN CNAME restrict.youtube.com.
+; ==============================================================================
+; BING SAFESEARCH
+; ==============================================================================
+www.bing.com                IN CNAME strict.bing.com.
+bing.com                    IN CNAME strict.bing.com.
