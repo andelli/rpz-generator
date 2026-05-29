@@ -98,16 +98,6 @@ Project information, list variants, source references, and documentation are ava
 
 ---
 
-## Requirements
-
-### Ubuntu / Debian
-
-```bash
-apt update
-apt install -y curl gawk sed grep coreutils
-```
-
----
 
 ## Installation
 
