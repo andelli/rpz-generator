@@ -46,9 +46,26 @@ Blocked domains are redirected to:
 [REDIRECT_URL]
 ```
 
+[![HaGeZi](https://img.shields.io/badge/Powered%20By-HaGeZi-blue)](https://github.com/hagezi/dns-blocklists)
 ### HaGeZi
 
-Currently uses:
+Official project repository:
+
+[HaGeZi DNS Blocklists GitHub Repository](https://github.com/hagezi/dns-blocklists?utm_source=chatgpt.com)
+
+HaGeZi provides multiple DNS blocklists focused on:
+
+* Ads
+* Tracking
+* Telemetry
+* Malware
+* Phishing
+* Scam domains
+* Fake domains
+* Popups
+* Privacy protection
+
+The RPZ generator currently uses:
 
 ```text
 https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/pro.txt
@@ -56,7 +73,7 @@ https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/nsfw.txt
 https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/popupads.txt
 ```
 
----
+Project information, list variants, source references, and documentation are available in the official repository.
 
 ## Directory Structure
 
