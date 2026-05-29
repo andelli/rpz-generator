@@ -49,6 +49,8 @@ Blocked domains are redirected to:
 
 ### HaGeZi
 [![HaGeZi](https://img.shields.io/badge/Powered%20By-HaGeZi-blue)](https://github.com/hagezi/dns-blocklists)
+
+
 Official project repository:
 
 [HaGeZi DNS Blocklists GitHub Repository](https://github.com/hagezi/dns-blocklists?utm_source=chatgpt.com)
