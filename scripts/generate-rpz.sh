@@ -14,7 +14,7 @@ LOCALDIR="${WORKDIR}/local"
 OUTPUT_FILE="${OUTDIR}/combined.rpz"
 SAFESEARCH_FILE="${LOCALDIR}/safesearch.txt"
 
-KOMDIGI_TARGET="redirecting.mediacepat.id."
+REDIRECT_URL="redirecting.mediacepat.id."
 
 SERIAL=$(date +%Y%m%d%H)
 SOURCE_CHANGED=0
@@ -356,7 +356,7 @@ echo "[PROCESS] Generating RPZ"
   echo "; KOMDIGI"
   echo "; ==================================="
 
-  awk -v target="${KOMDIGI_TARGET}" '
+  awk -v target="${REDIRECT_URL}" '
   {
       print $1 " CNAME " target
       print "*." $1 " CNAME " target
