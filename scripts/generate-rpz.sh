@@ -16,6 +16,11 @@ SAFESEARCH_FILE="${LOCALDIR}/safesearch.txt"
 
 REDIRECT_URL="redirecting.mediacepat.id."
 
+IP_KOMDIGI="139.255.196.202"
+ZONE_NAME="trustpositifkominfo"
+KOMDIGI_SERIAL_FILE="${TMPDIR}/komdigi.serial"
+KOMDIGI_DOMAINS="${TMPDIR}/komdigi_domains.txt"
+
 SERIAL=$(date +%Y%m%d%H)
 SOURCE_CHANGED=0
 
@@ -29,9 +34,6 @@ HAGEZI_SOURCES=(
   "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/pro.txt"
   "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/nsfw.txt"
   "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/popupads.txt"
-)
-KOMDIGI_SOURCES=(
-  "https://trustpositif.komdigi.go.id/assets/dns_zone/trustpositifkominfo"
 )
 #################################
 # FUNCTIONS
@@ -106,8 +108,8 @@ normalize_domain() {
 #################################
 find "${TMPDIR}" \
   -type f \
-  ! -name 'komdigi_*.txt' \
-  ! -name 'komdigi_*.etag' \
+  ! -name 'komdigi_domains.txt' \
+  ! -name 'komdigi.serial' \
   ! -name 'hagezi_*.txt' \
   ! -name 'hagezi_*.etag' \
   -delete
@@ -122,56 +124,49 @@ echo "Script by    : Andeli"
 echo "Powered by   : ChatGPT + Rokok LA Bold"
 echo "=============================="
 echo "####################################################################################################################################"
-echo "[PROCESS] Processing Komdigi"
+echo "[PROCESS] Processing Komdigi (AXFR)"
 
-COUNT=0
-for URL in "${KOMDIGI_SOURCES[@]}"; do
+echo "[PROCESS] Checking SOA serial ${ZONE_NAME} @ ${IP_KOMDIGI}"
 
-  echo "[PROCESS] Checking ETAG ${URL}"
+REMOTE_SERIAL=$(
+  dig +short SOA "${ZONE_NAME}" @"${IP_KOMDIGI}" \
+  | awk '{print $3}'
+)
 
-  COUNT=$((COUNT + 1))
+if [[ -z "${REMOTE_SERIAL}" ]]; then
+  echo "[!] Failed to retrieve Komdigi SOA serial"
+  exit 1
+fi
 
-  FILE="${TMPDIR}/komdigi_${COUNT}.txt"
-  ETAG_FILE="${TMPDIR}/komdigi_${COUNT}.etag"
+if [[ -f "${KOMDIGI_SERIAL_FILE}" && -f "${KOMDIGI_DOMAINS}" ]] \
+  && [[ "$(cat "${KOMDIGI_SERIAL_FILE}")" == "${REMOTE_SERIAL}" ]]; then
 
-  REMOTE_ETAG=$(
-    curl -sI "${URL}" |
-    awk -F'"' '/^etag:/ {print $2}' |
-    cut -d'-' -f2
-  )
+  echo -e "${GREEN}[SKIP] Komdigi not modified (serial ${REMOTE_SERIAL})${NC}"
 
-  if [[ -f "${ETAG_FILE}" ]]; then
+else
 
-    LOCAL_ETAG=$(cut -d'-' -f2 < "${ETAG_FILE}" | tr -d '"\r')
+  echo "[*] Komdigi updated (serial ${REMOTE_SERIAL})"
+  echo "[PROCESS] Transferring zone via AXFR"
 
-    if [[ "${LOCAL_ETAG}" == "${REMOTE_ETAG}" ]]; then
-
-      echo -e "${GREEN}[SKIP] Komdigi not modified${NC}"
-
-    else
-
-      echo "[*] Komdigi updated"
-
-      download_file "${URL}" "${FILE}"
-
-      echo "${REMOTE_ETAG}" > "${ETAG_FILE}"
-
-      SOURCE_CHANGED=1
-
-    fi
-
-  else
-
-    echo "[PROCESS] First download"
-
-    download_file "${URL}" "${FILE}"
-
-    echo -e "${REMOTE_ETAG}" > "${ETAG_FILE}"
-
-    SOURCE_CHANGED=1
-    echo "[DONE] Download Finished"
+  if ! dig +noall +answer AXFR "${ZONE_NAME}" @"${IP_KOMDIGI}" \
+      | tr -d '\r' \
+      | awk '$4 == "CNAME" { print $1 }' \
+      | sed "s/\.${ZONE_NAME}\.$//" \
+      | normalize_domain \
+      | sort -u > "${KOMDIGI_DOMAINS}"; then
+    echo "[!] Komdigi AXFR transfer failed"
+    exit 1
   fi
-done
+
+  if [[ ! -s "${KOMDIGI_DOMAINS}" ]]; then
+    echo "[!] No domains retrieved from Komdigi AXFR"
+    exit 1
+  fi
+
+  echo "${REMOTE_SERIAL}" > "${KOMDIGI_SERIAL_FILE}"
+  SOURCE_CHANGED=1
+  echo "[DONE] Komdigi AXFR finished"
+fi
 #################################
 # HAGEZI
 #################################
@@ -263,37 +258,6 @@ if [[ "${SOURCE_CHANGED}" == "0" ]]; then
     echo "####################################################################################################################################"
     exit 0
 fi
-  echo "[PROCESS] Building records HaGeZi"
-> "${TMPDIR}/komdigi_domains.txt"
-
-for FILE in "${TMPDIR}"/komdigi_[0-9]*.txt; do
-  
-  cat "${FILE}" \
-    | tr -d '\r' \
-    | grep 'CNAME' \
-    | awk '{print $1}' \
-    | normalize_domain \
-    >> "${TMPDIR}/komdigi_domains.txt"
-done
-
-sort -u \
-  "${TMPDIR}/komdigi_domains.txt" \
-  -o "${TMPDIR}/komdigi_domains.txt"
-#################################
-# BUILD KOMDIGI DOMAIN MAP
-#################################
-echo "[PROCESS] Building records komdigi"
-awk '
-{
-    d[$1]=1
-}
-END{
-    for(i in d)
-        print i
-}
-' "${TMPDIR}/komdigi_domains.txt" \
-| sort \
-> "${TMPDIR}/komdigi_unique.txt"
 
 #################################
 # REMOVE DOMAINS
@@ -316,7 +280,7 @@ NR==FNR {
         print
 }
 ' \
-"${TMPDIR}/komdigi_unique.txt" \
+"${KOMDIGI_DOMAINS}" \
 "${TMPDIR}/hagezi_raw.txt" \
 | sort -u \
 > "${TMPDIR}/hagezi_filtered.txt"
@@ -356,12 +320,9 @@ echo "[PROCESS] Generating RPZ"
   echo "; KOMDIGI"
   echo "; ==================================="
 
-  awk -v target="${REDIRECT_URL}" '
-  {
-      print $1 " CNAME " target
-      print "*." $1 " CNAME " target
-  }
-  ' "${TMPDIR}/komdigi_unique.txt"
+  awk -v target="${REDIRECT_URL}" \
+    '{ print $1 " CNAME " target }' \
+    "${KOMDIGI_DOMAINS}"
 
   echo
 

@@ -19,7 +19,8 @@ The script automatically:
 
 ## Features
 
-* ETag-based update checking
+* SOA serial-based update checking (Komdigi, via AXFR)
+* ETag-based update checking (HaGeZi)
 * Incremental downloads
 * Automatic duplicate removal
 * Komdigi priority over HaGeZi
@@ -154,9 +155,11 @@ or empty lines are ignored.
 
 ```text
 Download Sources
+(Komdigi AXFR / HaGeZi HTTP)
         │
         ▼
-Check ETag
+Check Updates
+(SOA serial / ETag)
         │
         ▼
 Build Domain Lists
