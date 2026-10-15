@@ -24,6 +24,9 @@ KOMDIGI_DOMAINS="${TMPDIR}/komdigi_domains.txt"
 # Service to restart after a successful update (empty to disable)
 PDNS_SERVICE="pdns-recursor"
 
+# Max memory buffer for sort (keeps the conflict check from exhausting RAM)
+SORT_MEM="256M"
+
 SERIAL=$(date +%Y%m%d%H)
 SOURCE_CHANGED=0
 
@@ -333,19 +336,21 @@ $1 ~ /^;/ {next}
 
 toupper($2) != "CNAME" {next}
 
+{ print tolower($1) "\t" tolower($3) }
+' "${OUTPUT_FILE}" \
+| LC_ALL=C sort -u -S "${SORT_MEM}" -T "${TMPDIR}" \
+| awk -F'\t' '
 {
-    name=tolower($1)
-    target=tolower($3)
-
-    if(seen[name] && seen[name] != target)
+    if ($1 == prev && $2 != prevt)
         conflicts++
 
-    seen[name]=target
+    prev=$1
+    prevt=$2
 }
 END{
     print conflicts+0
 }
-' "${OUTPUT_FILE}"
+'
 )
 END=$(date +%s)
 echo "[PROCESS] Conflict check completed in $((END-START)) seconds"
