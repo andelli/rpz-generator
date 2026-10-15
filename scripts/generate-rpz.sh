@@ -33,10 +33,17 @@ NC='\033[0m'
 #################################
 # SOURCES
 #################################
-HAGEZI_SOURCES=(
-  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/pro.txt"
-  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/nsfw.txt"
-  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/popupads.txt"
+HAGEZI_FILES=(
+  "rpz/pro.txt"
+  "rpz/nsfw.txt"
+  "rpz/popupads.txt"
+)
+HAGEZI_MIRRORS=(
+  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main"
+  "https://raw.githack.com/hagezi/dns-blocklists/main"
+  "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
+  "https://fastly.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
+  "https://gcore.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
 )
 #################################
 # FUNCTIONS
@@ -56,48 +63,26 @@ cat <<EOF
 
 EOF
 }
-download_file() {
-  local url="$1"
+fetch_hagezi() {
+  local rel="$1"
   local file="$2"
+  local attempt mirror
 
-  echo "[PROCESS] Downloading ${url}"
+  for attempt in 1 2 3; do
+    for mirror in "${HAGEZI_MIRRORS[@]}"; do
+      if curl -L --fail --silent --show-error "${mirror}/${rel}" -o "${file}.part" \
+          && tr -d '\r' < "${file}.part" | grep -q 'CNAME'; then
+        mv "${file}.part" "${file}"
+        return 0
+      fi
+    done
 
-  curl -L \
-    --fail \
-    --silent \
-    --show-error \
-    "${url}" \
-    -o "${file}"
-}
-download_if_modified() {
-  local url="$1"
-  local file="$2"
+    rm -f "${file}.part"
+    echo "[!] HaGeZi fetch failed, retrying (${attempt}/3)"
+    sleep $((attempt * 10))
+  done
 
-  echo "[*] Checking ${url}"
-
-  HTTP_CODE=$(
-    curl -s -L \
-      -z "${file}" \
-      -o "${file}.tmp" \
-      -w "%{http_code}" \
-      "${url}"
-  )
-
-  case "${HTTP_CODE}" in
-    200)
-      mv "${file}.tmp" "${file}"
-      echo "[*] Updated"
-      ;;
-    304)
-      rm -f "${file}.tmp"
-      echo -e "${GREEN}[*] not modified${NC}"
-      ;;
-    *)
-      rm -f "${file}.tmp"
-      echo "[!] Download failed (${HTTP_CODE})"
-      exit 1
-      ;;
-  esac
+  return 1
 }
 normalize_domain() {
   tr '[:upper:]' '[:lower:]' \
@@ -114,7 +99,7 @@ find "${TMPDIR}" \
   ! -name 'komdigi_domains.txt' \
   ! -name 'komdigi.serial' \
   ! -name 'hagezi_*.txt' \
-  ! -name 'hagezi_*.etag' \
+  ! -name 'hagezi_*.sha' \
   -delete
 #################################
 # KOMDIGI
@@ -177,68 +162,35 @@ echo
 echo "[PROCESS] Processing HaGeZi"
 
 > "${TMPDIR}/hagezi_raw.txt"
+
 COUNT=0
-for URL in "${HAGEZI_SOURCES[@]}"; do
+for REL in "${HAGEZI_FILES[@]}"; do
 
   COUNT=$((COUNT + 1))
 
   FILE="${TMPDIR}/hagezi_${COUNT}.txt"
-  ETAG_FILE="${TMPDIR}/hagezi_${COUNT}.etag"
+  HASH_FILE="${TMPDIR}/hagezi_${COUNT}.sha"
 
-  echo "[PROCESS] Checking ETAG ${URL}"
+  echo "[PROCESS] Fetching HaGeZi ${REL}"
 
-  REMOTE_ETAG=$(
-    curl -sI "${URL}" \
-    | awk -F': ' '
-        BEGIN{IGNORECASE=1}
-        /^etag:/{
-            gsub("\r","",$2)
-            print $2
-        }'
-  )
-
-  if [[ -z "${REMOTE_ETAG}" ]]; then
-    echo "[!] Failed to retrieve ETag"
+  if ! fetch_hagezi "${REL}" "${FILE}"; then
+    echo "[!] Failed to fetch HaGeZi ${REL} from all mirrors"
     exit 1
   fi
 
-  if [[ -f "${ETAG_FILE}" ]]; then
+  NEW_HASH=$(sha256sum "${FILE}" | cut -d' ' -f1)
+  OLD_HASH=$(cat "${HASH_FILE}" 2>/dev/null || true)
 
-    LOCAL_ETAG=$(cat "${ETAG_FILE}")
+  if [[ "${NEW_HASH}" == "${OLD_HASH}" ]]; then
 
-    if [[ "${LOCAL_ETAG}" == "${REMOTE_ETAG}" ]]; then
-
-      echo -e "${GREEN}[SKIP] HaGeZi not modified${NC}"
-
-    else
-
-      echo "[UPDATE] HaGeZi updated"
-
-      download_file "${URL}" "${FILE}"
-
-      echo "${REMOTE_ETAG}" > "${ETAG_FILE}"
-      SOURCE_CHANGED=1
-
-    fi
+    echo -e "${GREEN}[SKIP] HaGeZi ${REL} not modified${NC}"
 
   else
 
-    echo "[PROCESS] First download"
-
-    download_file "${URL}" "${FILE}"
-
-    echo "${REMOTE_ETAG}" > "${ETAG_FILE}"
+    echo "[*] HaGeZi ${REL} updated"
+    echo "${NEW_HASH}" > "${HASH_FILE}"
     SOURCE_CHANGED=1
-    echo -e "${GREEN}[DONE] Download Finished${NC}"
-  fi
 
-  if [[ ! -f "${FILE}" ]]; then
-    echo "[!] Missing HaGeZi source file"
-    exit 1
-  fi
-  if ! tr -d '\r' < "${FILE}" | grep -q 'CNAME'; then
-    echo "[!] HaGeZi source looks invalid (no CNAME records): ${URL}"
-    exit 1
   fi
 
   tr -d '\r' < "${FILE}" \
@@ -259,7 +211,7 @@ if [[ "${SOURCE_CHANGED}" == "0" ]]; then
         break
       fi
     done < <(find "${TMPDIR}" -maxdepth 1 -type f \
-               \( -name 'komdigi.serial' -o -name 'hagezi_*.etag' \))
+               \( -name 'komdigi.serial' -o -name 'hagezi_*.sha' \))
   fi
 
   if [[ "${STALE}" == "0" ]]; then

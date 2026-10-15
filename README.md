@@ -20,7 +20,7 @@ The script automatically:
 ## Features
 
 * SOA serial-based update checking (Komdigi, via AXFR)
-* ETag-based update checking (HaGeZi)
+* Content-hash update checking with mirror fallback (HaGeZi)
 * Incremental downloads
 * Automatic duplicate removal
 * Komdigi priority over HaGeZi
@@ -75,6 +75,10 @@ https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/pro.txt
 https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/nsfw.txt
 https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/popupads.txt
 ```
+
+Each file is fetched with automatic mirror fallback (`raw.githubusercontent.com`,
+`raw.githack.com`, then jsdelivr) and retried on failure. Updates are detected
+by content hash, so transient HTTP 429 responses cannot poison the cache.
 
 Project information, list variants, source references, and documentation are available in the official repository.
 
