@@ -76,7 +76,7 @@ fetch_hagezi() {
       url="${mirror//\{file\}/$rel}"
 
       if curl -L --fail --silent --show-error "${url}" -o "${file}.part" \
-          && tr -d '\r' < "${file}.part" | grep -q 'CNAME'; then
+          && grep -q 'CNAME' "${file}.part"; then
         mv "${file}.part" "${file}"
         return 0
       fi
