@@ -34,9 +34,9 @@ NC='\033[0m'
 # SOURCES
 #################################
 HAGEZI_SOURCES=(
-  "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/pro.txt"
-  "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/nsfw.txt"
-  "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/popupads.txt"
+  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/pro.txt"
+  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/nsfw.txt"
+  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/popupads.txt"
 )
 #################################
 # FUNCTIONS
@@ -236,8 +236,12 @@ for URL in "${HAGEZI_SOURCES[@]}"; do
     echo "[!] Missing HaGeZi source file"
     exit 1
   fi
-  cat "${FILE}" \
-    | tr -d '\r' \
+  if ! tr -d '\r' < "${FILE}" | grep -q 'CNAME'; then
+    echo "[!] HaGeZi source looks invalid (no CNAME records): ${URL}"
+    exit 1
+  fi
+
+  tr -d '\r' < "${FILE}" \
     | grep 'CNAME' \
     >> "${TMPDIR}/hagezi_raw.txt"
 done

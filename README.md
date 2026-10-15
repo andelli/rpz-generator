@@ -71,9 +71,9 @@ HaGeZi provides multiple DNS blocklists focused on:
 The RPZ generator currently uses this repo for additional filtering:
 
 ```text
-https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/pro.txt
-https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/nsfw.txt
-https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/rpz/popupads.txt
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/pro.txt
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/nsfw.txt
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/rpz/popupads.txt
 ```
 
 Project information, list variants, source references, and documentation are available in the official repository.
