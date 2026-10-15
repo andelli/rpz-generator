@@ -21,6 +21,9 @@ ZONE_NAME="trustpositifkominfo"
 KOMDIGI_SERIAL_FILE="${TMPDIR}/komdigi.serial"
 KOMDIGI_DOMAINS="${TMPDIR}/komdigi_domains.txt"
 
+# Service to restart after a successful update (empty to disable)
+PDNS_SERVICE="pdns-recursor"
+
 SERIAL=$(date +%Y%m%d%H)
 SOURCE_CHANGED=0
 
@@ -390,5 +393,16 @@ fi
 
 echo
 echo "RPZ validation passed."
+
+if [[ -n "${PDNS_SERVICE}" ]]; then
+  echo
+  echo "[PROCESS] Restarting ${PDNS_SERVICE}"
+  if systemctl restart "${PDNS_SERVICE}"; then
+    echo -e "${GREEN}[DONE] ${PDNS_SERVICE} restarted${NC}"
+  else
+    echo "[!] Failed to restart ${PDNS_SERVICE}"
+    exit 1
+  fi
+fi
 
 echo "####################################################################################################################################"
