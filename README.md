@@ -27,6 +27,7 @@ The script automatically:
 * RPZ conflict detection
 * SafeSearch support
 * Cached mode when no source changes occur
+* Automatic recursor restart with a systemd `TimeoutStartSec` override
 * Minimal dependencies
 
 ---

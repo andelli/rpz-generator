@@ -24,6 +24,9 @@ KOMDIGI_DOMAINS="${TMPDIR}/komdigi_domains.txt"
 # Service to restart after a successful update (empty to disable)
 PDNS_SERVICE="pdns-recursor"
 
+# systemd start timeout for the service; loading a large RPZ can be slow
+PDNS_START_TIMEOUT="15min"
+
 # Max memory buffer for sort (keeps the conflict check from exhausting RAM)
 SORT_MEM="256M"
 
@@ -53,6 +56,20 @@ HAGEZI_MIRRORS=(
 #################################
 # FUNCTIONS
 #################################
+ensure_pdns_timeout() {
+  local dir="/etc/systemd/system/${PDNS_SERVICE}.service.d"
+  local file="${dir}/timeout.conf"
+
+  if [[ -f "${file}" ]] \
+      && grep -qF "TimeoutStartSec=${PDNS_START_TIMEOUT}" "${file}"; then
+    return 0
+  fi
+
+  mkdir -p "${dir}"
+  printf '[Service]\nTimeoutStartSec=%s\n' "${PDNS_START_TIMEOUT}" > "${file}"
+  systemctl daemon-reload
+  echo "[*] Set TimeoutStartSec=${PDNS_START_TIMEOUT} for ${PDNS_SERVICE}"
+}
 generate_header() {
 cat <<EOF
 \$TTL 60
@@ -381,6 +398,8 @@ echo
 echo "RPZ validation passed."
 
 if [[ -n "${PDNS_SERVICE}" ]]; then
+  ensure_pdns_timeout
+
   echo
   echo "[PROCESS] Restarting ${PDNS_SERVICE}"
   if systemctl restart "${PDNS_SERVICE}"; then
