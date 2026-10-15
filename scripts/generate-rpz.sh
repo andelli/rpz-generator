@@ -244,6 +244,22 @@ done
 
 if [[ "${SOURCE_CHANGED}" == "0" ]]; then
 
+  STALE=0
+
+  if [[ ! -f "${OUTPUT_FILE}" ]]; then
+    STALE=1
+  else
+    while IFS= read -r MARKER; do
+      if [[ "${MARKER}" -nt "${OUTPUT_FILE}" ]]; then
+        STALE=1
+        break
+      fi
+    done < <(find "${TMPDIR}" -maxdepth 1 -type f \
+               \( -name 'komdigi.serial' -o -name 'hagezi_*.etag' \))
+  fi
+
+  if [[ "${STALE}" == "0" ]]; then
+
     TOTAL_RECORDS=$(grep -vc '^;' "${OUTPUT_FILE}")
 
     echo
@@ -260,6 +276,10 @@ if [[ "${SOURCE_CHANGED}" == "0" ]]; then
     echo "=============================="
     echo "####################################################################################################################################"
     exit 0
+  fi
+
+  echo
+  echo -e "${GREEN}[*] Cache markers newer than output - regenerating${NC}"
 fi
 
 #################################
