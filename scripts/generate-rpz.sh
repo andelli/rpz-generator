@@ -39,11 +39,13 @@ HAGEZI_FILES=(
   "rpz/popupads.txt"
 )
 HAGEZI_MIRRORS=(
-  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main"
-  "https://raw.githack.com/hagezi/dns-blocklists/main"
-  "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
-  "https://fastly.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
-  "https://gcore.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
+  "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/{file}"
+  "https://raw.githack.com/hagezi/dns-blocklists/main/{file}"
+  "https://gh-proxy.com/https://raw.githubusercontent.com/hagezi/dns-blocklists/main/{file}"
+  "https://ghfast.top/https://raw.githubusercontent.com/hagezi/dns-blocklists/main/{file}"
+  "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/{file}"
+  "https://fastly.jsdelivr.net/gh/hagezi/dns-blocklists@latest/{file}"
+  "https://gcore.jsdelivr.net/gh/hagezi/dns-blocklists@latest/{file}"
 )
 #################################
 # FUNCTIONS
@@ -66,11 +68,14 @@ EOF
 fetch_hagezi() {
   local rel="$1"
   local file="$2"
-  local attempt mirror
+  local attempt mirror url
 
   for attempt in 1 2 3; do
     for mirror in "${HAGEZI_MIRRORS[@]}"; do
-      if curl -L --fail --silent --show-error "${mirror}/${rel}" -o "${file}.part" \
+
+      url="${mirror//\{file\}/$rel}"
+
+      if curl -L --fail --silent --show-error "${url}" -o "${file}.part" \
           && tr -d '\r' < "${file}.part" | grep -q 'CNAME'; then
         mv "${file}.part" "${file}"
         return 0
